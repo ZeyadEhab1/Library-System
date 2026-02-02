@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+enum CheckoutStatus {
+  ACTIVE
+  RETURNED
+  OVERDUE
+}
+
+enum ReservationStatus {
+  PENDING
+  FULFILLED
+  EXPIRED
+  CANCELLED
+}
+
+model Book {
+  id                 Int      @id @default(autoincrement())
+  title              String   @db.VarChar(255)
+  author             String   @db.VarChar(255)
+  isbn               String   @unique @db.VarChar(13)
+  available_quantity Int      @default(0)
+  shelf_location     String   @db.VarChar(50)
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  checkouts    Checkout[]
+  reservations Reservation[]
+  reviews      Review[]
+  
+  @@map("books")
+}
+
+model Borrower {
+  id         Int      @id @default(autoincrement())
+  name       String   @db.VarChar(255)
+  email      String   @unique @db.VarChar(255)
+  phone      String?  @db.VarChar(20)
+  password   String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  checkouts    Checkout[]
+  reservations Reservation[]
+  reviews      Review[]
+  
+  @@map("borrowers")
+}
+
+model Checkout {
+  id          Int            @id @default(autoincrement())
+  book_id     Int
+  borrower_id Int
+  borrowed_at DateTime       @default(now())
+  due_date    DateTime
+  returned_at DateTime?
+  status      CheckoutStatus @default(ACTIVE)
+
+  book     Book     @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  borrower Borrower @relation(fields: [borrower_id], references: [id], onDelete: Cascade)
+
+  @@index([book_id])
+  @@index([borrower_id])
+  @@index([status])
+  @@map("checkouts")
+}
+
+model Reservation {
+  id          Int               @id @default(autoincrement())
+  book_id     Int
+  borrower_id Int
+  reserved_at DateTime          @default(now())
+  expires_at  DateTime
+  status      ReservationStatus @default(PENDING)
+
+  book     Book     @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  borrower Borrower @relation(fields: [borrower_id], references: [id], onDelete: Cascade)
+  
+  @@index([book_id])
+  @@index([borrower_id])
+  @@index([status])
+  @@map("reservations")
+}
+
+model Review {
+  id          Int      @id @default(autoincrement())
+  book_id     Int
+  borrower_id Int
+  rating      Int
+  comment     String?  @db.Text
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  book     Book     @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  borrower Borrower @relation(fields: [borrower_id], references: [id], onDelete: Cascade)
+
+  @@unique([book_id, borrower_id])
+  @@index([book_id])
+  @@map("reviews")
+}
